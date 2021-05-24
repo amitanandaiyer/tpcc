@@ -17,18 +17,19 @@
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
@@ -37,7 +38,7 @@ public class OrderStatus extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(OrderStatus.class);
 
-  public SQLStmt ordStatGetNewestOrdSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt ordStatGetNewestOrdSQL = new InstrumentedSQLStmt(
       "SELECT O_ID, O_CARRIER_ID, O_ENTRY_D " +
       "  FROM " + TPCCConstants.TABLENAME_OPENORDER +
       " WHERE O_W_ID = ? " +
@@ -45,14 +46,14 @@ public class OrderStatus extends Procedure {
       "   AND O_C_ID = ? " +
       " ORDER BY O_ID DESC LIMIT 1");
 
-  public SQLStmt ordStatGetOrderLinesSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt ordStatGetOrderLinesSQL = new InstrumentedSQLStmt(
       "SELECT OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT, OL_DELIVERY_D " +
       "  FROM " + TPCCConstants.TABLENAME_ORDERLINE +
       " WHERE OL_O_ID = ?" +
       "   AND OL_D_ID = ?" +
       "   AND OL_W_ID = ?");
 
-  public SQLStmt payGetCustSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, " +
       "       C_CITY, C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, " +
       "       C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -61,7 +62,7 @@ public class OrderStatus extends Procedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt customerByNameSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt customerByNameSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_ID, C_STREET_1, C_STREET_2, C_CITY, " +
       "       C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, " +
       "       C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -71,12 +72,20 @@ public class OrderStatus extends Procedure {
       "   AND C_LAST = ? " +
       " ORDER BY C_FIRST");
 
-  private PreparedStatement ordStatGetNewestOrd = null;
-  private PreparedStatement ordStatGetOrderLines = null;
-  private PreparedStatement payGetCust = null;
-  private PreparedStatement customerByName = null;
+  private InstrumentedPreparedStatement ordStatGetNewestOrd = null;
+  private InstrumentedPreparedStatement ordStatGetOrderLines = null;
+  private InstrumentedPreparedStatement payGetCust = null;
+  private InstrumentedPreparedStatement customerByName = null;
 
-  public ResultSet run(Connection conn, Random gen, int w_id, int numWarehouses,
+  public static void printLatencyStats() {
+    LOG.info("OrderStatus : ");
+    LOG.info("latency OrdStatGetNewestOrd " + ordStatGetNewestOrdSQL.getStats());
+    LOG.info("latency OrdStatGetOrderLines " + ordStatGetOrderLinesSQL.getStats());
+    LOG.info("latency PayGetCust " + payGetCustSQL.getStats());
+    LOG.info("latency CustomerByName " + customerByNameSQL.getStats());
+  }
+
+  public void run(Connection conn, Random gen, int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
     boolean trace = LOG.isTraceEnabled();
@@ -207,7 +216,6 @@ public class OrderStatus extends Procedure {
       LOG.trace(sb.toString());
     }
 
-    return null;
   }
 
   // attention duplicated code across trans... ok for now to maintain separate

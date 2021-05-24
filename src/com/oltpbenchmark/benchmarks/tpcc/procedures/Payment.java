@@ -17,17 +17,18 @@
 package com.oltpbenchmark.benchmarks.tpcc.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Random;
 
+import com.oltpbenchmark.api.InstrumentedSQLStmt;
 import com.oltpbenchmark.api.Procedure;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.jdbc.InstrumentedPreparedStatement;
+
 import org.apache.log4j.Logger;
 
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
@@ -37,29 +38,29 @@ public class Payment extends Procedure {
 
   private static final Logger LOG = Logger.getLogger(Payment.class);
 
-  public SQLStmt payUpdateWhseSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payUpdateWhseSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_WAREHOUSE +
       "   SET W_YTD = W_YTD + ? " +
       " WHERE W_ID = ? ");
 
-  public SQLStmt payGetWhseSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payGetWhseSQL = new InstrumentedSQLStmt(
       "SELECT W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_NAME" +
       "  FROM " + TPCCConstants.TABLENAME_WAREHOUSE +
       " WHERE W_ID = ?");
 
-  public SQLStmt payUpdateDistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payUpdateDistSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_DISTRICT +
       "   SET D_YTD = D_YTD + ? " +
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public SQLStmt payGetDistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payGetDistSQL = new InstrumentedSQLStmt(
       "SELECT D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_NAME" +
       "  FROM " + TPCCConstants.TABLENAME_DISTRICT +
       " WHERE D_W_ID = ? " +
       "   AND D_ID = ?");
 
-  public SQLStmt payGetCustSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payGetCustSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, " +
       "       C_CITY, C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, " +
       "       C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -68,14 +69,14 @@ public class Payment extends Procedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payGetCustCdataSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payGetCustCdataSQL = new InstrumentedSQLStmt(
       "SELECT C_DATA " +
       "  FROM " + TPCCConstants.TABLENAME_CUSTOMER +
       " WHERE C_W_ID = ? " +
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payUpdateCustBalCdataSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payUpdateCustBalCdataSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = ?, " +
       "       C_YTD_PAYMENT = ?, " +
@@ -85,7 +86,7 @@ public class Payment extends Procedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payUpdateCustBalSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payUpdateCustBalSQL = new InstrumentedSQLStmt(
       "UPDATE " + TPCCConstants.TABLENAME_CUSTOMER +
       "   SET C_BALANCE = ?, " +
       "       C_YTD_PAYMENT = ?, " +
@@ -94,12 +95,12 @@ public class Payment extends Procedure {
       "   AND C_D_ID = ? " +
       "   AND C_ID = ?");
 
-  public SQLStmt payInsertHistSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt payInsertHistSQL = new InstrumentedSQLStmt(
       "INSERT INTO " + TPCCConstants.TABLENAME_HISTORY +
       " (H_C_D_ID, H_C_W_ID, H_C_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA) " +
       " VALUES (?,?,?,?,?,?,?,?)");
 
-  public SQLStmt customerByNameSQL = new SQLStmt(
+  public static final InstrumentedSQLStmt customerByNameSQL = new InstrumentedSQLStmt(
       "SELECT C_FIRST, C_MIDDLE, C_ID, C_STREET_1, C_STREET_2, C_CITY, " +
       "       C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, " +
       "       C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE " +
@@ -110,18 +111,31 @@ public class Payment extends Procedure {
       " ORDER BY C_FIRST");
 
   // Payment Txn
-  private PreparedStatement payUpdateWhse = null;
-  private PreparedStatement payGetWhse = null;
-  private PreparedStatement payUpdateDist = null;
-  private PreparedStatement payGetDist = null;
-  private PreparedStatement payGetCust = null;
-  private PreparedStatement payGetCustCdata = null;
-  private PreparedStatement payUpdateCustBalCdata = null;
-  private PreparedStatement payUpdateCustBal = null;
-  private PreparedStatement payInsertHist = null;
-  private PreparedStatement customerByName = null;
+  private InstrumentedPreparedStatement payUpdateWhse = null;
+  private InstrumentedPreparedStatement payGetWhse = null;
+  private InstrumentedPreparedStatement payUpdateDist = null;
+  private InstrumentedPreparedStatement payGetDist = null;
+  private InstrumentedPreparedStatement payGetCust = null;
+  private InstrumentedPreparedStatement payGetCustCdata = null;
+  private InstrumentedPreparedStatement payUpdateCustBalCdata = null;
+  private InstrumentedPreparedStatement payUpdateCustBal = null;
+  private InstrumentedPreparedStatement payInsertHist = null;
+  private InstrumentedPreparedStatement customerByName = null;
 
-  public ResultSet run(Connection conn, Random gen,
+  public static void printLatencyStats() {
+    LOG.info("Payment : ");
+    LOG.info("latency UpdateWhse " + payUpdateWhseSQL.getStats());
+    LOG.info("latency GetWhse " + payGetWhseSQL.getStats());
+    LOG.info("latency UpdateDist " + payUpdateDistSQL.getStats());
+    LOG.info("latency GetDist " + payGetDistSQL.getStats());
+    LOG.info("latency GetCust " + payGetCustSQL.getStats());
+    LOG.info("latency GetCustCdata " + payGetCustCdataSQL.getStats());
+    LOG.info("latency UpdateCustBalCdata " + payUpdateCustBalCdataSQL.getStats());
+    LOG.info("latency UpdateCustBal " + payUpdateCustBalSQL.getStats());
+    LOG.info("latency InsertHist " + payInsertHistSQL.getStats());
+    LOG.info("latency CustomerByName " + customerByNameSQL.getStats());
+  }
+  public void run(Connection conn, Random gen,
                   int w_id, int numWarehouses,
                   int terminalDistrictLowerID, int terminalDistrictUpperID,
                   Worker w) throws SQLException {
@@ -348,7 +362,6 @@ public class Payment extends Procedure {
       terminalMessage.append("\n+-----------------------------------------------------------------+\n\n");
       LOG.trace(terminalMessage.toString());
     }
-    return null;
   }
 
   // attention duplicated code across trans... ok for now to maintain separate
